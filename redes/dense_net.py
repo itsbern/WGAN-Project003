@@ -27,7 +27,7 @@ class Generator(tf.keras.Model):
 
     def call(self, input_data):
         x = self.noise_to_latent(input_data)
-        return tf.expand_dims(x, axis=1)  # Equivalente a x[:, None, :] en PyTorch
+        return x  # Equivalente a x[:, None, :] en PyTorch
 
 
 class Discriminator(tf.keras.Model):
@@ -49,8 +49,7 @@ class Discriminator(tf.keras.Model):
             tf.keras.layers.LeakyReLU(),
             tf.keras.layers.Dense(2 * self.ts_dim),
             tf.keras.layers.LeakyReLU(),
-            tf.keras.layers.Dense(1)
-            # layers.Activation('sigmoid') # Descomenta si quieres usar la activación sigmoide al final
+            tf.keras.layers.Dense(self.ts_dim)
         ])
 
     def call(self, input_data):
