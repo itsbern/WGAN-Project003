@@ -1,4 +1,4 @@
-WGAN for Financial Time-Series Generation
+# WGAN for Financial Time-Series Generation
 By Bernardo Ramírez
 
 This repository contains an implementation of a Wasserstein Generative Adversarial Network with Gradient Penalty (WGAN-GP) for generating synthetic financial time-series data. The project explores the application of advanced GAN frameworks within the financial domain, specifically for modeling complex time-series data. The model is demonstrated on historical price data for AAPL stock, with included results showcasing the model's performance.
