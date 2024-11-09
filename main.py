@@ -6,7 +6,7 @@ import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
 
 # Define hiperparámetros
-latent_dim = 350
+latent_dim = 400
 ts_dim = 252
 epochs = 1000
 n_critic = 5
@@ -36,16 +36,6 @@ def postprocess_data(data, scaler):
 
 # Función para convertir rendimientos a precios
 def convert_returns_to_prices(returns, initial_price):
-    """
-    Convierte una serie de rendimientos logarítmicos en precios.
-    
-    Args:
-        returns (np.array): Serie de rendimientos logarítmicos.
-        initial_price (float): Precio inicial para la reconstrucción de la serie de precios.
-        
-    Returns:
-        np.array: Serie de precios generados.
-    """
     prices = initial_price * np.exp(np.cumsum(returns))
     return prices
 
@@ -112,7 +102,7 @@ def train(dataset, epochs, batch_size, n_critic):
             g_loss = train_generator(batch_size, noise)
 
         # Almacenar pérdidas cada 100 épocas
-        if epoch % 100 == 0:
+        if epoch % 10 == 0:
             d_losses.append(d_loss.numpy())
             g_losses.append(g_loss.numpy())
             print(f"Epoch {epoch}, D Loss: {d_loss.numpy()}, G Loss: {g_loss.numpy()}")
@@ -135,6 +125,7 @@ train(dataset, epochs, batch_size, n_critic)
 # Generar precios sintéticos ajustando la dimensión de salida
 def generate_synthetic_prices(generator, num_scenarios, latent_dim, ts_dim, scaler, initial_price):
     scenarios = []
+    scenarios_rend = []
     for _ in range(num_scenarios):
         noise = tf.random.normal([1, latent_dim])
         generated_returns = generator(noise)
@@ -144,34 +135,53 @@ def generate_synthetic_prices(generator, num_scenarios, latent_dim, ts_dim, scal
         generated_returns = postprocess_data(generated_returns.numpy(), scaler)
         generated_prices = convert_returns_to_prices(generated_returns, initial_price)
         scenarios.append(generated_prices)
-    return np.array(scenarios)
+        scenarios_rend.append(generated_returns)
+    return np.array(scenarios), np.array(scenarios_rend)
 
 # Generar 100 escenarios y postprocesar para devolverlos a la escala original
 num_scenarios = 100
-initial_price = real_price['Close'].iloc[0]
-synthetic_prices = generate_synthetic_prices(generator, num_scenarios, latent_dim, ts_dim, scaler, initial_price)
+initial_price = real_price['Close'].iloc[4]
+synthetic_prices, synthetic_rends = generate_synthetic_prices(generator, num_scenarios, latent_dim, ts_dim, scaler, initial_price)
 
+
+for i in range(num_scenarios):
+    synthetic_prices[i, :5] = real_price['Close'].values[:5]
+    
+synthetic_prices_df = pd.DataFrame(synthetic_prices)
+synthetic_prices_df.to_csv('synthetic_prices.csv', index=False)
+print("Los escenarios generados se han guardado en 'synthetic_prices.csv'")
+
+    
+    
 # Graficar pérdidas de entrenamiento
-plt.figure(figsize=(10, 5))
-plt.plot(range(0, epochs, 100), d_losses, label='Discriminator Loss')
-plt.plot(range(0, epochs, 100), g_losses, label='Generator Loss')
-plt.xlabel('Epochs')
-plt.ylabel('Loss')
-plt.title('Training Losses')
-plt.legend()
-plt.show()
+fig, axs = plt.subplots(1, 3, figsize=(18, 5))
 
-for i in range(num_scenarios):
-    plt.plot(synthetic_prices[i], alpha=0.3)
-plt.show()
+# Gráfica de pérdidas de entrenamiento
+axs[0].bar(range(len(d_losses)), d_losses, label='Discriminator Loss', alpha=0.7)
+axs[0].bar(range(len(g_losses)), g_losses, label='Generator Loss', alpha=0.7)
+axs[0].set_xlabel('Epochs')
+axs[0].set_ylabel('Loss')
+axs[0].set_title('Training Losses')
+axs[0].legend()
 
-# Graficar precio real vs precios generados en la escala original
-plt.figure(figsize=(10, 5))
-plt.plot(real_price['Close'].values[:252], label='Real Price', color='black', linewidth=2)
+# Gráfica de precios generados vs. precio real
+axs[1].plot(real_price['Close'].values[:252], label='Real Price', color='black', linewidth=2)
 for i in range(num_scenarios):
-    plt.plot(synthetic_prices[i], alpha=0.3)
-plt.xlabel('Time')
-plt.ylabel('Price')
-plt.title('Real Price vs Synthetic Prices')
-plt.legend(['Real Price'])
+    axs[1].plot(synthetic_prices[i], alpha=0.3)
+axs[1].set_xlabel('Time')
+axs[1].set_ylabel('Price')
+axs[1].set_title('Real Price vs Synthetic Prices')
+axs[1].legend(['Real Price'])
+
+# Gráfica de rendimientos generados vs. rendimiento real
+axs[2].plot(real_price_values[:252], label='Real Returns', color='black', linewidth=2)
+for i in range(num_scenarios):
+    axs[2].plot(synthetic_rends[i], alpha=0.3)
+axs[2].set_xlabel('Time')
+axs[2].set_ylabel('Returns')
+axs[2].set_title('Real Returns vs Synthetic Returns')
+axs[2].legend(['Real Returns'])
+
+# Ajustar el espacio entre subplots
+plt.tight_layout()
 plt.show()
