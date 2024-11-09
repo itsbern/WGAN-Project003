@@ -108,7 +108,7 @@ def train(dataset, epochs, batch_size, n_critic):
             print(f"Epoch {epoch}, D Loss: {d_loss.numpy()}, G Loss: {g_loss.numpy()}")
 
 # Cargar el archivo CSV y preprocesar los datos
-real_price = pd.read_csv('/Users/Usuario/OneDrive/Escritorio/ITESO/MICRO-TRADING/Project-GAN/data/aapl_data.csv')
+real_price = pd.read_csv('../WGAN-Project003/data/aapl_data.csv')
 real_price_values = (np.log(real_price['Close']) - np.log(real_price["Close"].shift())).dropna().values
 real_price_normalized, scaler = preprocess_data(real_price_values)
 
